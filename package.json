@@ -1,0 +1,32 @@
+{
+  "name": "heluna-tokenizer",
+  "version": "0.0.1",
+  "description": "A simple tokenizer for the Heluna programming language.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kasperjj/heluna-tokenizer.git"
+  },
+  "author": "Kasper Jeppesen",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/kasperjj/heluna-tokenizer/issues"
+  },
+  "homepage": "https://github.com/kasperjj/heluna-tokenizer#readme",
+  "devDependencies": {
+    "@babel/cli": "^7.8.4",
+    "@babel/core": "^7.9.0",
+    "@babel/preset-env": "^7.9.0",
+    "jest": "^25.2.0"
+  },
+  "dependencies": {
+    "@babel/polyfill": "^7.8.7",
+    "core-js": "^2.6.11",
+    "install": "^0.13.0",
+    "next-i18next": "^4.2.1",
+    "npm": "^6.14.3"
+  }
+}
