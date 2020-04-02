@@ -160,7 +160,7 @@ function tokenizeString(rawString){
 							case 't':state.buffer+="\t";break;
 							case "\\":state.buffer+="\\";break;
 							case '"':state.buffer+='"';break;
-							default: state.error("Unknown escape character '\\"+input+"'");
+							default: state.error("Unknown escape character '\\"+input+"' in string literal");
 						}
 						state.escaped=false;
 					}else{
@@ -199,16 +199,16 @@ function tokenizeString(rawString){
 							state.buffer+=input;
 							// next must be digit
 							input=state.read();
-							if(input==-1)state.error("Unclosed floating point literal.");
+							if(input==-1)state.error("Floating point literal using exponent notation missing a digit after e before end of code.");
 							if(isDigit(input)){
 								state.buffer+=input;
-							}else state.error("Unclosed floating point literal.");
+							}else state.error("Floating point literals using exponent notation must have a digit after e, instead '"+input+"' was found.");
 						}else{
 							state.collectToken(state.current,state.buffer);
 							state.pushBack(input); // push token
 						}
 					}else if(state.buffer.endsWith("e")){
-						state.error("Unclosed floating point literal.");
+						state.error("Floating point literals using exponent notation must have a digit after e, instead '"+input+"' was found.");
 					}else{
 						state.collectToken(state.current,state.buffer);
 						state.pushBack(input); // push token
@@ -253,9 +253,9 @@ function tokenizeString(rawString){
 	}
 	if(state.current==TokenType.STRING){
 		// String literals must be closed before the end of the file, everything else is valid
-		state.error("String literal never closed");
+		state.error("String literals must start and end with '\"'.");
 	}else if(state.current==TokenType.FLOAT && state.buffer.endsWith("e")){
-		state.error("Floating point literal missing exponent value")
+		state.error("Floating point literal using exponent notation missing a digit after e before end of code.")
 	}else if(state.current!=TokenType.NONE){
 		state.collectToken(state.current,state.buffer);
 	}
