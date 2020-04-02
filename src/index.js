@@ -59,9 +59,19 @@ class TokenizerState{
 		this.buffer="";
 		this.column=0;
 		this.line=1;
+		this.stored=-1;
+	}
+
+	pushBack(ch){
+		this.stored=ch
 	}
 
 	read(){
+		if(this.stored!==-1){
+			var tmp=this.stored
+			this.stored=-1
+			return tmp
+		}
 		if(this.position<this.rawString.length){
 			var ch=this.rawString.charAt(this.position++);
 			if(ch=="\n"){
@@ -118,7 +128,6 @@ function tokenizeString(rawString){
 	var list=new TokenList(rawString)
 	var state=new TokenizerState(rawString,list)
 	var input=state.read();
-	var stored=-1;
 	var escaped=false;
 	while(input!=-1){
 		switch(state.current){
@@ -176,7 +185,7 @@ function tokenizeString(rawString){
 							//       awareness of the actual language in the tokenizer.
 							// we are probably in a list accessor, deny float change
 							state.collectToken(state.current,state.buffer);
-							stored=input;
+							state.pushBack(input) // push token
 						}else{
 							state.buffer+=input;
 							state.current=TokenType.FLOAT;
@@ -196,13 +205,13 @@ function tokenizeString(rawString){
 							}else state.error("Unclosed floating point literal.");
 						}else{
 							state.collectToken(state.current,state.buffer);
-							stored=input; // push token
+							state.pushBack(input); // push token
 						}
 					}else if(state.buffer.endsWith("e")){
 						state.error("Unclosed floating point literal.");
 					}else{
 						state.collectToken(state.current,state.buffer);
-						stored=input; // push token
+						state.pushBack(input); // push token
 					}
 				break;
 			case TokenType.COMMENT:
@@ -218,7 +227,7 @@ function tokenizeString(rawString){
 						state.collectToken(state.current,state.buffer);
 					}else if(isSymbol(input)){
 						state.collectToken(state.current,state.buffer);
-						stored=input; // push token
+						state.pushBack(input); // push token
 					}else if(input==':'){
 						state.current=TokenType.LABEL;
 						state.collectToken(state.current,state.buffer);
@@ -232,20 +241,15 @@ function tokenizeString(rawString){
 						state.collectToken(state.current,state.buffer);
 					}else if(isSymbol(input)){
 						state.collectToken(state.current,state.buffer);
-						stored=input; // push token
+						state.pushBack(input); // push token
 					}else{
 						state.buffer+=input;
 					}
 				break;
 		}
-		if(stored!=-1){
-			// If a character has been pushed into stored, make this the new input
-			input=stored;
-			stored=-1;
-		}else{
-			// If there was no character waiting in stored, read a new character
-			input=state.read();
-		}
+
+		// Read a new character
+		input=state.read();
 	}
 	if(state.current==TokenType.STRING){
 		// String literals must be closed before the end of the file, everything else is valid
