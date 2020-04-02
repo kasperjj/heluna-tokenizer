@@ -1,6 +1,6 @@
 {
   "name": "heluna-tokenizer",
-  "version": "0.0.2",
+  "version": "1.0.0",
   "description": "A simple tokenizer for the Heluna programming language.",
   "main": "src/index.js",
   "scripts": {
