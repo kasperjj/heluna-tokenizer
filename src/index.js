@@ -75,13 +75,16 @@ class TokenizerState{
 	}
 
 	read(){
+		// If a character has been pushed back, return it now
 		if(this.stored!==-1){
 			var tmp=this.stored
 			this.stored=-1
 			return tmp
 		}
+		// If we have more characters, return the next
 		if(this.position<this.rawString.length){
 			var ch=this.rawString.charAt(this.position++);
+			// Adjust line and column numbers as needed to track our location
 			if(ch=="\n"){
 				this.line++;
 				this.column=1;
