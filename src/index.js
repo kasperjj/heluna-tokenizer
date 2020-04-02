@@ -60,6 +60,7 @@ class TokenizerState{
 		this.column=0;
 		this.line=1;
 		this.stored=-1;
+		this.escaped=false;
 	}
 
 	pushBack(ch){
@@ -128,7 +129,6 @@ function tokenizeString(rawString){
 	var list=new TokenList(rawString)
 	var state=new TokenizerState(rawString,list)
 	var input=state.read();
-	var escaped=false;
 	while(input!=-1){
 		switch(state.current){
 			case TokenType.NONE:
@@ -153,7 +153,7 @@ function tokenizeString(rawString){
 				break;
 			case TokenType.STRING:
 					// We are currently reading a string literal, transform escaped characters and collect when " is reached
-					if(escaped){
+					if(state.escaped){
 						switch(input){
 							case 'n':state.buffer+="\n";break;
 							case 'r':state.buffer+="\r";break;
@@ -162,12 +162,12 @@ function tokenizeString(rawString){
 							case '"':state.buffer+='"';break;
 							default: state.error("Unknown escape character '\\"+input+"'");
 						}
-						escaped=false;
+						state.escaped=false;
 					}else{
 						if(input=='"'){
 							state.collectToken(TokenType.STRING,state.buffer);
 						}else if(input=="\\"){
-							escaped=true;
+							state.escaped=true;
 						}else{
 							state.buffer+=input;
 						}
