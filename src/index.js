@@ -1,3 +1,4 @@
+// The different token types that can be collected
 let TokenType={
 	INTEGER:Symbol(),
 	SYMBOL:Symbol(),
@@ -10,7 +11,10 @@ let TokenType={
 	IDENTIFIER:Symbol()
 }
 
+// Characters that separate tokens
 let CharacterBlanks=[' ',"\n","\r","\t"]
+
+// Reserved symbols that can not be part of identifiers, labels or references
 let CharacterSymbols=['=','.',',','-','+','*','/','%','?','&','!','|','\'',';','<','>','(',')','{','}','[',']']
 
 // Returns true for any character that is treated as a token separating blank
@@ -36,12 +40,13 @@ function isDigit(ch){
 	return (ch>= '0' && ch <= '9');
 }
 
-
+// Creates a new exception that can be thrown
 function TokenizeException(message) {
    this.message = message;
    this.name = "TokenizeException";
 }
 
+// Class used to hold all data and metadata for a single token
 class Token{
 	constructor(type,data,line,column){
 		this.type=type
@@ -50,6 +55,8 @@ class Token{
 		this.column=column
 	}
 }
+
+// Class used to hold the state needed by the tokenizer function
 class TokenizerState{
 	constructor(str,list){
 		this.rawString=str
@@ -100,6 +107,7 @@ class TokenizerState{
 	}
 }
 
+// Class used to hold the result of a string tokenization
 class TokenList{
 	constructor(str){
 		this.rawString=str
@@ -125,11 +133,15 @@ class TokenList{
 	}
 }
 
+// Tokenizes a string based on the Heluna grammar.
+// Returns a TokenList instance with results.
+// Will throw a TokenizerException on syntax errors in the input.
 function tokenizeString(rawString){
 	var list=new TokenList(rawString)
 	var state=new TokenizerState(rawString,list)
+	// Read a single character from the input an start tokenizing
 	var input=state.read();
-	while(input!=-1){
+	while(input!=-1){ // Continue until we run out of characters
 		switch(state.current){
 			case TokenType.NONE:
 					// we are not currently in a token, start a new state
@@ -251,14 +263,18 @@ function tokenizeString(rawString){
 		// Read a new character
 		input=state.read();
 	}
+	// Check the sanity of our state after we have run out of characters and report any errors
 	if(state.current==TokenType.STRING){
 		// String literals must be closed before the end of the file, everything else is valid
 		state.error("String literals must start and end with '\"'.");
 	}else if(state.current==TokenType.FLOAT && state.buffer.endsWith("e")){
 		state.error("Floating point literal using exponent notation missing a digit after e before end of code.")
 	}else if(state.current!=TokenType.NONE){
+		// If we have one last token being collected, collect it now
 		state.collectToken(state.current,state.buffer);
 	}
+	// Return the result of the tokenization.
+	// Any errors would have thrown an exception and never let us hit this point.
 	return list;
 }
 
