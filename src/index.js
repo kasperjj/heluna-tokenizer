@@ -1,3 +1,4 @@
+// The different token types that can be collected
 let TokenType={
 	INTEGER:Symbol(),
 	SYMBOL:Symbol(),
@@ -10,7 +11,10 @@ let TokenType={
 	IDENTIFIER:Symbol()
 }
 
+// Characters that separate tokens
 let CharacterBlanks=[' ',"\n","\r","\t"]
+
+// Reserved symbols that can not be part of identifiers, labels or references
 let CharacterSymbols=['=','.',',','-','+','*','/','%','?','&','!','|','\'',';','<','>','(',')','{','}','[',']']
 
 // Returns true for any character that is treated as a token separating blank
@@ -36,12 +40,13 @@ function isDigit(ch){
 	return (ch>= '0' && ch <= '9');
 }
 
-
+// Creates a new exception that can be thrown
 function TokenizeException(message) {
    this.message = message;
    this.name = "TokenizeException";
 }
 
+// Class used to hold all data and metadata for a single token
 class Token{
 	constructor(type,data,line,column){
 		this.type=type
@@ -51,20 +56,35 @@ class Token{
 	}
 }
 
-class TokenList{
-	constructor(str){
+// Class used to hold the state needed by the tokenizer function
+class TokenizerState{
+	constructor(str,list){
 		this.rawString=str
-		this.list=[]
+		this.list=list
 		this.position=0;
-		this.state=TokenType.NONE;
+		this.current=TokenType.NONE;
 		this.buffer="";
 		this.column=0;
 		this.line=1;
+		this.stored=-1;
+		this.escaped=false;
+	}
+
+	pushBack(ch){
+		this.stored=ch
 	}
 
 	read(){
+		// If a character has been pushed back, return it now
+		if(this.stored!==-1){
+			var tmp=this.stored
+			this.stored=-1
+			return tmp
+		}
+		// If we have more characters, return the next
 		if(this.position<this.rawString.length){
 			var ch=this.rawString.charAt(this.position++);
+			// Adjust line and column numbers as needed to track our location
 			if(ch=="\n"){
 				this.line++;
 				this.column=1;
@@ -77,22 +97,30 @@ class TokenList{
 		}
 	} 
 
-	lastTokenWas(str){
-		if(this.list.length==0)return false;
-		if(this.list[this.list.length-1].data==str)return true;
-		return false;
-	}
-
 	collectToken(tokenType,tokenData){
-		this.list.push(new Token(tokenType,tokenData,this.line,this.column));
+		this.list.addToken(new Token(tokenType,tokenData,this.line,this.column));
 		this.buffer=""
-		this.state=TokenType.NONE;
+		this.current=TokenType.NONE;
 	}
 
 	error(msg){
 		// TODO: add line and column numbers
 		// do nothing for now
 		throw new TokenizeException(msg);
+	}
+}
+
+// Class used to hold the result of a string tokenization
+class TokenList{
+	constructor(str){
+		this.rawString=str
+		this.list=[]
+	}
+
+	lastTokenWas(str){
+		if(this.list.length==0)return false;
+		if(this.list[this.list.length-1].data==str)return true;
+		return false;
 	}
 
 	count(){
@@ -102,148 +130,154 @@ class TokenList{
 	getToken(index){
 		return this.list[index]
 	}
+
+	addToken(token){
+		this.list.push(token)
+	}
 }
 
+// Tokenizes a string based on the Heluna grammar.
+// Returns a TokenList instance with results.
+// Will throw a TokenizerException on syntax errors in the input.
 function tokenizeString(rawString){
 	var list=new TokenList(rawString)
-	var input=list.read();
-	var stored=-1;
-	var escaped=false;
-	while(input!=-1){
-		switch(list.state){
+	var state=new TokenizerState(rawString,list)
+	// Read a single character from the input an start tokenizing
+	var input=state.read();
+	while(input!=-1){ // Continue until we run out of characters
+		switch(state.current){
 			case TokenType.NONE:
 					// we are not currently in a token, start a new state
 					if(!isBlankCharacter(input)){
 						if(input=='"'){
-							list.state=TokenType.STRING;
+							state.current=TokenType.STRING;
 						}else if(input=='$'){
-							list.state=TokenType.REFERENCE;
+							state.current=TokenType.REFERENCE;
 						}else if(isDigit(input)){
-							list.buffer+=input;
-							list.state=TokenType.INTEGER;
+							state.buffer+=input;
+							state.current=TokenType.INTEGER;
 						}else if(input=='#'){
-							list.state=TokenType.COMMENT;
+							state.current=TokenType.COMMENT;
 						}else if(isSymbol(input)){
-							list.collectToken(TokenType.SYMBOL,input);
+							state.collectToken(TokenType.SYMBOL,input);
 						}else{
-							list.buffer+=input;
-							list.state=TokenType.IDENTIFIER;
+							state.buffer+=input;
+							state.current=TokenType.IDENTIFIER;
 						}
 					}
 				break;
 			case TokenType.STRING:
 					// We are currently reading a string literal, transform escaped characters and collect when " is reached
-					if(escaped){
+					if(state.escaped){
 						switch(input){
-							case 'n':list.buffer+="\n";break;
-							case 'r':list.buffer+="\r";break;
-							case 't':list.buffer+="\t";break;
-							case "\\":list.buffer+="\\";break;
-							case '"':list.buffer+='"';break;
-							default: list.error("Unknown escape character '\\"+input+"'");
+							case 'n':state.buffer+="\n";break;
+							case 'r':state.buffer+="\r";break;
+							case 't':state.buffer+="\t";break;
+							case "\\":state.buffer+="\\";break;
+							case '"':state.buffer+='"';break;
+							default: state.error("Unknown escape character '\\"+input+"' in string literal");
 						}
-						escaped=false;
+						state.escaped=false;
 					}else{
 						if(input=='"'){
-							list.collectToken(TokenType.STRING,list.buffer);
+							state.collectToken(TokenType.STRING,state.buffer);
 						}else if(input=="\\"){
-							escaped=true;
+							state.escaped=true;
 						}else{
-							list.buffer+=input;
+							state.buffer+=input;
 						}
 					}
 				break;
 			case TokenType.FLOAT:
 			case TokenType.INTEGER:
 					if(isDigit(input)){
-						list.buffer+=input;
+						state.buffer+=input;
 					}else if(isBlankCharacter(input)){
-						list.collectToken(list.state,list.buffer);
+						state.collectToken(state.current,state.buffer);
 					}else if(input=='.'){
 						if(list.lastTokenWas(".")){
 							// TODO: Find a way to handle this gracefully without introducing
 							//       awareness of the actual language in the tokenizer.
 							// we are probably in a list accessor, deny float change
-							list.collectToken(list.state,list.buffer);
-							stored=input;
+							state.collectToken(state.current,state.buffer);
+							state.pushBack(input) // push token
 						}else{
-							list.buffer+=input;
-							list.state=TokenType.FLOAT;
+							state.buffer+=input;
+							state.current=TokenType.FLOAT;
 						}
 					}else if(input=='e'||input=='E'){
-						list.buffer+='e';
-						list.state=TokenType.FLOAT;
+						state.buffer+='e';
+						state.current=TokenType.FLOAT;
 					}else if(input=='-'){
-						var c2=list.buffer.charAt(list.buffer.length-1);
+						var c2=state.buffer.charAt(state.buffer.length-1);
 						if(c2=='e' || c2=='E'){
-							list.buffer+=input;
+							state.buffer+=input;
 							// next must be digit
-							input=list.read();
-							if(input==-1)list.error("Unclosed floating point literal.");
+							input=state.read();
+							if(input==-1)state.error("Floating point literal using exponent notation missing a digit after e before end of code.");
 							if(isDigit(input)){
-								list.buffer+=input;
-							}else list.error("Unclosed floating point literal.");
+								state.buffer+=input;
+							}else state.error("Floating point literals using exponent notation must have a digit after e, instead '"+input+"' was found.");
 						}else{
-							list.collectToken(list.state,list.buffer);
-							stored=input; // push token
+							state.collectToken(state.current,state.buffer);
+							state.pushBack(input); // push token
 						}
-					}else if(list.buffer.endsWith("e")){
-						list.error("Unclosed floating point literal.");
+					}else if(state.buffer.endsWith("e")){
+						state.error("Floating point literals using exponent notation must have a digit after e, instead '"+input+"' was found.");
 					}else{
-						list.collectToken(list.state,list.buffer);
-						stored=input; // push token
+						state.collectToken(state.current,state.buffer);
+						state.pushBack(input); // push token
 					}
 				break;
 			case TokenType.COMMENT:
 					// Collect comments until the end of the line
 					if(input=="\n"){
-						list.collectToken(list.state,list.buffer);
+						state.collectToken(state.current,state.buffer);
 					}else{
-						list.buffer+=input;
+						state.buffer+=input;
 					}
 				break;
 			case TokenType.IDENTIFIER:
 					if(isBlankCharacter(input)){
-						list.collectToken(list.state,list.buffer);
+						state.collectToken(state.current,state.buffer);
 					}else if(isSymbol(input)){
-						list.collectToken(list.state,list.buffer);
-						stored=input; // push token
+						state.collectToken(state.current,state.buffer);
+						state.pushBack(input); // push token
 					}else if(input==':'){
-						list.state=TokenType.LABEL;
-						list.collectToken(list.state,list.buffer);
+						state.current=TokenType.LABEL;
+						state.collectToken(state.current,state.buffer);
 					}else{
-						list.buffer+=input;
+						state.buffer+=input;
 					}
 				break;
 			case TokenType.LABEL:
 			case TokenType.REFERENCE:
 					if(isBlankCharacter(input)){
-						list.collectToken(list.state,list.buffer);
+						state.collectToken(state.current,state.buffer);
 					}else if(isSymbol(input)){
-						list.collectToken(list.state,list.buffer);
-						stored=input; // push token
+						state.collectToken(state.current,state.buffer);
+						state.pushBack(input); // push token
 					}else{
-						list.buffer+=input;
+						state.buffer+=input;
 					}
 				break;
 		}
-		if(stored!=-1){
-			// If a character has been pushed into stored, make this the new input
-			input=stored;
-			stored=-1;
-		}else{
-			// If there was no character waiting in stored, read a new character
-			input=list.read();
-		}
+
+		// Read a new character
+		input=state.read();
 	}
-	if(list.state==TokenType.STRING){
+	// Check the sanity of our state after we have run out of characters and report any errors
+	if(state.current==TokenType.STRING){
 		// String literals must be closed before the end of the file, everything else is valid
-		list.error("String literal never closed");
-	}else if(list.state==TokenType.FLOAT && list.buffer.endsWith("e")){
-		list.error("Floating point literal missing exponent value")
-	}else if(list.state!=TokenType.NONE){
-		list.collectToken(list.state,list.buffer);
+		state.error("String literals must start and end with '\"'.");
+	}else if(state.current==TokenType.FLOAT && state.buffer.endsWith("e")){
+		state.error("Floating point literal using exponent notation missing a digit after e before end of code.")
+	}else if(state.current!=TokenType.NONE){
+		// If we have one last token being collected, collect it now
+		state.collectToken(state.current,state.buffer);
 	}
+	// Return the result of the tokenization.
+	// Any errors would have thrown an exception and never let us hit this point.
 	return list;
 }
 
