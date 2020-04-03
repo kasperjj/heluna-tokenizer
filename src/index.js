@@ -115,6 +115,7 @@ class TokenList{
 	constructor(str){
 		this.rawString=str
 		this.list=[]
+		this.position=0
 	}
 
 	lastTokenWas(str){
@@ -133,6 +134,22 @@ class TokenList{
 
 	addToken(token){
 		this.list.push(token)
+	}
+
+	reset(){
+		this.position=0
+	}
+
+	next(){
+		if(this.hasNext()){
+			return this.list[this.position++]
+		}else{
+			return null
+		}
+	}
+
+	hasNext(){
+		return this.position<this.list.length
 	}
 }
 

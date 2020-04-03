@@ -579,3 +579,39 @@ test('Reference expression $foo + $bar', () => {
   expect(tkn.line).toBe(1)
   expect(tkn.column).toBe(11)
 });
+
+test('Token list iteration', () => {
+  var list=tokenizeString('4 + 9')
+  expect(list.hasNext()).toBeTruthy();
+  var tkn=list.next()
+  expect(tkn.type).toBe(TokenType.INTEGER)
+  expect(tkn.data).toBe("4")
+  expect(tkn.line).toBe(1)
+  expect(tkn.column).toBe(2)
+  tkn=list.next()
+  expect(tkn.type).toBe(TokenType.SYMBOL)
+  expect(tkn.data).toBe("+")
+  expect(tkn.line).toBe(1)
+  expect(tkn.column).toBe(3)
+  tkn=list.next()
+  expect(tkn.type).toBe(TokenType.INTEGER)
+  expect(tkn.data).toBe("9")
+  expect(tkn.line).toBe(1)
+  expect(tkn.column).toBe(5)
+  expect(list.hasNext()).toBeFalsy();
+  expect(list.next()).toBeNull();
+});
+
+test('Token list reset', () => {
+  var list=tokenizeString('4')
+  expect(list.hasNext()).toBeTruthy();
+  list.next()
+  expect(list.hasNext()).toBeFalsy();
+  list.reset()
+  expect(list.hasNext()).toBeTruthy();
+  var tkn=list.next()
+  expect(tkn.type).toBe(TokenType.INTEGER)
+  expect(tkn.data).toBe("4")
+  expect(tkn.line).toBe(1)
+  expect(tkn.column).toBe(1)
+});
