@@ -615,3 +615,51 @@ test('Token list reset', () => {
   expect(tkn.line).toBe(1)
   expect(tkn.column).toBe(1)
 });
+
+test('Token list requireNext', () => {
+  var list=tokenizeString('4')
+  expect(list.requireNext()).not.toBeNull()
+  expect(()=>{tokenizeString('').requireNext()}).toThrow()
+});
+
+
+test('Token list requireSymbol', () => {
+  var list=tokenizeString('+')
+  expect(list.requireSymbol("some error")).not.toBeNull()
+  expect(()=>{tokenizeString('foo').requireSymbol("some error")}).toThrow()
+});
+
+test('Token list consumeSymbol', () => {
+  var list=tokenizeString('+ -')
+  expect(list.consumeSymbol("+")).toBeTruthy()
+  expect(list.consumeSymbol("+")).toBeFalsy()
+  list.next()
+  expect(list.consumeSymbol("+")).toBeFalsy()
+});
+
+test('Token list requireIdentifier', () => {
+  var list=tokenizeString('foo')
+  expect(list.requireIdentifier("some error")).not.toBeNull()
+  expect(()=>{tokenizeString('42').requireIdentifier("some error")}).toThrow()
+});
+
+test('Token list consumeIdentifier', () => {
+  var list=tokenizeString('foo bar 42')
+  expect(list.consumeIdentifier("foo")).toBeTruthy()
+  expect(list.consumeIdentifier("foo")).toBeFalsy()
+  expect(list.consumeIdentifier("bar")).toBeTruthy()
+  expect(list.consumeIdentifier("42")).toBeFalsy()
+  list.next()
+  expect(list.consumeIdentifier("foo")).toBeFalsy()
+});
+
+test('Token list consumseIdentifierHard', () => {
+  var list=tokenizeString('foo')
+  expect(list.consumeIdentifierHard("foo","some error")).toBeTruthy()
+  expect(()=>{tokenizeString('42').consumeIdentifierHard("foo","some error")}).toThrow()
+});
+
+test('Token list returnToken empty', () => {
+  var list=tokenizeString('')
+  expect(()=>{list.returnToken()}).not.toThrow();
+});
