@@ -663,3 +663,14 @@ test('Token list returnToken empty', () => {
   var list=tokenizeString('')
   expect(()=>{list.returnToken()}).not.toThrow();
 });
+
+test('Set and get position',()=>{
+  var list=tokenizeString('A B')
+  expect(list.hasNext()).toBeTruthy()
+  var pos=list.getPosition()
+  list.next()
+  list.next()
+  expect(list.hasNext()).toBeFalsy()
+  list.setPosition(pos)
+  expect(list.hasNext()).toBeTruthy()
+})

@@ -143,6 +143,14 @@ class TokenList{
 		this.position=0
 	}
 
+	getPosition(){
+		return this.position
+	}
+
+	setPosition(position){
+		this.position=position
+	}
+
 	// Returns the next available token or null if no more tokens are available
 	next(){
 		if(this.hasNext()){
