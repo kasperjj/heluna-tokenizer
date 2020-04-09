@@ -41,9 +41,12 @@ function isDigit(ch){
 }
 
 // Creates a new exception that can be thrown
-function TokenizeException(message) {
-   this.message = message;
-   this.name = "TokenizeException";
+class ParseException{
+	constructor(token,component,message) {
+   		this.token=token
+   		this.message = message
+		this.name = component
+	}
 }
 
 // Class used to hold all data and metadata for a single token
@@ -106,7 +109,7 @@ class TokenizerState{
 	error(msg){
 		// TODO: add line and column numbers
 		// do nothing for now
-		throw new TokenizeException(msg);
+		throw new ParseException(new Token(TokenType.NONE,"",this.line,this.column),"Tokenizer",msg);
 	}
 }
 
@@ -140,6 +143,7 @@ class TokenList{
 		this.position=0
 	}
 
+	// Returns the next available token or null if no more tokens are available
 	next(){
 		if(this.hasNext()){
 			return this.list[this.position++]
@@ -148,8 +152,80 @@ class TokenList{
 		}
 	}
 
+	// Returns the next available token or throws an exception with the given
+	// message if no more tokens are available.
+	requireNext(err){
+		if(!this.hasNext())throw new ParseException(new Token(TokenType.NONE,"",-1,-1),"Parser",err)
+		return this.next()
+	}
+
+	// Returns the next available token if it is a symbol. If there are no more
+	// tokens, or the next token is not a symbol an exception will be thrown with
+	// the given message.
+	requireSymbol(err){
+		var tkn=this.requireNext(err);
+		if(tkn.type===TokenType.SYMBOL){
+			return tkn
+		}
+		this.returnToken()
+		throw new ParseException(tkn,"Parser",err);
+	}
+
+	// Returns true if next available token is a symbol matching the given string.
+	consumeSymbol(str){
+		if(!this.hasNext())return false
+		var tkn=this.next()
+		if(tkn.type===TokenType.SYMBOL && tkn.data===str){
+			return true
+		}
+		this.returnToken()
+		return false
+	}
+
+	// Returns the next available token if it is an identifier. If there are no more
+	// tokens, or the next token is not an identifier an exception will be thrown with
+	// the given message.
+	requireIdentifier(err){
+		var tkn=this.requireNext(err)
+		if(tkn.type==TokenType.IDENTIFIER){
+			return tkn;
+		}
+		this.returnToken()
+		throw new ParseException(tkn,"Parser",err);
+	}
+
+	// Returns true if next available token is an identifier matching the given string.
+	consumeIdentifier(str){
+		if(!this.hasNext())return false
+		var tkn=this.next()
+		if(tkn.type===TokenType.IDENTIFIER && tkn.data===str){
+			return true
+		}
+		this.returnToken()
+		return false
+	}
+
+	// Returns true if next available token is an identifier matching the given string.
+	// If not, an exception will be thrown with the given message.
+	consumeIdentifierHard(str,err){
+		var tkn=this.requireNext(err);
+		if(tkn.type===TokenType.IDENTIFIER && tkn.data===str){
+			return true
+		}
+		this.returnToken()
+		throw new ParseException(tkn,"Parser",err)
+	}
+
 	hasNext(){
 		return this.position<this.list.length
+	}
+
+	returnToken(){
+		this.position--
+		if(this.position<0){
+			// For now just reset... but we should really throw an exception
+			this.reset()
+		}
 	}
 }
 
@@ -299,4 +375,4 @@ function tokenizeString(rawString){
 }
 
 
-module.exports = {tokenizeString,TokenType};
+module.exports = {tokenizeString,TokenType,ParseException};
