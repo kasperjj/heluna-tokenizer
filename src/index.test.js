@@ -674,3 +674,25 @@ test('Set and get position',()=>{
   list.setPosition(pos)
   expect(list.hasNext()).toBeTruthy()
 })
+
+test('Token index', () => {
+  var list=tokenizeString('4+9')
+  expect(list.count()).toBe(3);
+  var tkn=list.getToken(0)
+  expect(tkn.index).toBe(0)
+  tkn=list.getToken(1)
+  expect(tkn.index).toBe(1)
+  tkn=list.getToken(2)
+  expect(tkn.index).toBe(2)
+});
+
+test('Token index with spaces', () => {
+  var list=tokenizeString(' 4+  9')
+  expect(list.count()).toBe(3);
+  var tkn=list.getToken(0)
+  expect(tkn.index).toBe(1)
+  tkn=list.getToken(1)
+  expect(tkn.index).toBe(2)
+  tkn=list.getToken(2)
+  expect(tkn.index).toBe(5)
+});

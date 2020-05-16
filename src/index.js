@@ -51,11 +51,12 @@ class ParseException{
 
 // Class used to hold all data and metadata for a single token
 class Token{
-	constructor(type,data,line,column){
+	constructor(type,data,line,column,index){
 		this.type=type
 		this.data=data
 		this.line=line
 		this.column=column
+		this.index=index
 	}
 }
 
@@ -101,7 +102,12 @@ class TokenizerState{
 	} 
 
 	collectToken(tokenType,tokenData){
-		this.list.addToken(new Token(tokenType,tokenData,this.line,this.column));
+		var correctedPosition=this.position-tokenData.length
+		if(this.stored!==-1){
+			// there is a token in the buffer... our index is one ahead
+			correctedPosition--
+		}
+		this.list.addToken(new Token(tokenType,tokenData,this.line,this.column,correctedPosition));
 		this.buffer=""
 		this.current=TokenType.NONE;
 	}
@@ -300,8 +306,8 @@ function tokenizeString(rawString){
 							// TODO: Find a way to handle this gracefully without introducing
 							//       awareness of the actual language in the tokenizer.
 							// we are probably in a list accessor, deny float change
-							state.collectToken(state.current,state.buffer);
 							state.pushBack(input) // push token
+							state.collectToken(state.current,state.buffer);
 						}else{
 							state.buffer+=input;
 							state.current=TokenType.FLOAT;
@@ -320,14 +326,14 @@ function tokenizeString(rawString){
 								state.buffer+=input;
 							}else state.error("Floating point literals using exponent notation must have a digit after e, instead '"+input+"' was found.");
 						}else{
-							state.collectToken(state.current,state.buffer);
 							state.pushBack(input); // push token
+							state.collectToken(state.current,state.buffer);
 						}
 					}else if(state.buffer.endsWith("e")){
 						state.error("Floating point literals using exponent notation must have a digit after e, instead '"+input+"' was found.");
 					}else{
-						state.collectToken(state.current,state.buffer);
 						state.pushBack(input); // push token
+						state.collectToken(state.current,state.buffer);
 					}
 				break;
 			case TokenType.COMMENT:
@@ -342,8 +348,8 @@ function tokenizeString(rawString){
 					if(isBlankCharacter(input)){
 						state.collectToken(state.current,state.buffer);
 					}else if(isSymbol(input)){
-						state.collectToken(state.current,state.buffer);
 						state.pushBack(input); // push token
+						state.collectToken(state.current,state.buffer);
 					}else if(input==':'){
 						state.current=TokenType.LABEL;
 						state.collectToken(state.current,state.buffer);
@@ -356,8 +362,8 @@ function tokenizeString(rawString){
 					if(isBlankCharacter(input)){
 						state.collectToken(state.current,state.buffer);
 					}else if(isSymbol(input)){
-						state.collectToken(state.current,state.buffer);
 						state.pushBack(input); // push token
+						state.collectToken(state.current,state.buffer);
 					}else{
 						state.buffer+=input;
 					}
